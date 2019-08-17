@@ -1,6 +1,8 @@
 
 find_package(Protobuf)
 
+set(CMAKE_BUILD_TYPE "Debug")
+
 if(PROTOBUF_FOUND)
     protobuf_generate_cpp(ONNX_PROTO_SRCS ONNX_PROTO_HDRS onnx.proto)
     add_executable(onnx2ncnn onnx2ncnn.cpp ${ONNX_PROTO_SRCS} ${ONNX_PROTO_HDRS})

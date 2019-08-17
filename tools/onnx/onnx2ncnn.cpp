@@ -233,7 +233,7 @@ int main(int argc, char** argv)
     const onnx::GraphProto& graph = model.graph();
     onnx::GraphProto* mutable_graph = model.mutable_graph();
 
-    int node_count = graph.node_size();
+    int node_count = graph.node_size();  // 107
 
     // node reference
     std::map<std::string, int> node_reference;
@@ -351,7 +351,7 @@ int main(int argc, char** argv)
 
             if (node_reference.find(input_name) == node_reference.end())
             {
-                node_reference[input_name] = 1;
+                node_reference[input_name] = 1;   //node reference: 所有blob input 层名的数量
             }
             else
             {
@@ -370,12 +370,13 @@ int main(int argc, char** argv)
         {
             const std::string& output_name = node.output(j);
 
-            blob_names.insert(output_name);
+            blob_names.insert(output_name);     //blob names: set  所有blob input 层 和output层的名称
         }
     }
 
     // include Input node
     int input_node_count = 0;
+    int tmp = graph.input_size();
     for (int j=0; j<graph.input_size(); j++)
     {
         const std::string& input_name = graph.input(j).name();
@@ -400,6 +401,7 @@ int main(int argc, char** argv)
         onnx::NodeProto* node = mutable_graph->mutable_node(i);
 
         // MatMul <= Transpose(weight) - MatMul
+        std::string tmp = node->op_type();
         if (node->op_type() == "Transpose")
         {
             // check weight
@@ -943,7 +945,7 @@ int main(int argc, char** argv)
         {
             std::string input_name = node.input(j);
 
-            // check weight
+            // check weight   check it is not weight
             if (weights.find(input_name) != weights.end())
             {
                 continue;
@@ -1111,6 +1113,9 @@ int main(int argc, char** argv)
         }
         else if (op == "Conv")
         {
+            std::string a = node.input(1);
+            std::string b = node.input(2);
+
             const onnx::TensorProto& W = weights[node.input(1)];
 
             int num_filter = W.dims(0);

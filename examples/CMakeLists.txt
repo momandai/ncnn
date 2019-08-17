@@ -1,4 +1,4 @@
-
+set(CMAKE_BUILD_TYPE "Debug")
 find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
 if(NOT OpenCV_FOUND)
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
@@ -41,3 +41,6 @@ target_link_libraries(shufflenetv2 ${NCNN_EXAMPLE_LINK_LIBRARIES})
 
 add_executable(peleenetssd_seg peleenetssd_seg.cpp)
 target_link_libraries(peleenetssd_seg ${NCNN_EXAMPLE_LINK_LIBRARIES})
+
+add_executable(my-mobilenetv2-yolov3-1cls my-yolov3-1cls.cpp)
+target_link_libraries(my-mobilenetv2-yolov3-1cls ${NCNN_EXAMPLE_LINK_LIBRARIES})
