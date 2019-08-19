@@ -26,12 +26,34 @@
 #include "gpu.h"
 #endif // NCNN_VULKAN
 
+using namespace std;
+
+int net_in_size = 416;
+
 struct Object
 {
     cv::Rect_<float> rect;
     int label;
     float prob;
 };
+
+cv::Mat paddedResize(cv::Mat &src) {
+    int h = src.rows;
+    int w = src.cols;
+    float ratio = float(net_in_size) / float(max(h, w));
+    int resized_h = int(h*ratio);
+    int resized_w = int(w*ratio);
+    float dw = (net_in_size-resized_w) / 2.0;
+    float dh = (net_in_size-resized_h) / 2.0;
+    int left_pad = round(dw - 0.1);
+    int right_pad = round(dw + 0.1);
+    int top_pad = round(dh - 0.1);
+    int bottom_pad = round(dh + 0.1);
+    cv::Mat img;
+    cv::resize(src, img, cv::Size(resized_w, resized_h), 0, 0, cv::INTER_AREA);
+    cv::copyMakeBorder(img, img, top_pad, bottom_pad, left_pad, right_pad, cv::BORDER_CONSTANT, cv::Scalar(128, 128, 128));
+    return img;
+}
 
 static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
 {
@@ -41,13 +63,9 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
     yolov3.opt.use_vulkan_compute = true;
 #endif // NCNN_VULKAN
 
-    // original pretrained model from https://github.com/eric612/MobileNet-YOLO
-    // param : https://drive.google.com/open?id=1V9oKHP6G6XvXZqhZbzNKL6FI_clRWdC-
-    // bin : https://drive.google.com/open?id=1DBcuFCr-856z3FRQznWL_S5h-Aj3RawA
     yolov3.load_param("yolov3.param");
     yolov3.load_model("yolov3.bin");
 
-    const int target_size = 352;
 
     int img_w = bgr.cols;
     int img_h = bgr.rows;
@@ -58,10 +76,20 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
 //    const float norm_vals[3] = {0.007843f, 0.007843f, 0.007843f};
 //    in.substract_mean_normalize(mean_vals, norm_vals);
 
+    ncnn::Mat in = ncnn::Mat::from_pixels(bgr.data, ncnn::Mat::PIXEL_BGR, net_in_size, net_in_size);
+//    cv::Mat a = cv::Mat(416, 416, CV_8UC3, cv::Scalar(0, 0, 0));
+//    ncnn::Mat in = ncnn::Mat::from_pixels(a.data, ncnn::Mat::PIXEL_BGR, net_in_size, net_in_size);
 
+    const float mean_vals[3] = {0.f, 0.f, 0.f};
+    const float norm_vals[3] = {1.0f/255.0f, 1.0f/255.0f, 1.0f/255.0f};
+    in.substract_mean_normalize(mean_vals, norm_vals);
 
-    cv::Mat a = cv::Mat::zeros(416, 416, CV_8UC3);
-    ncnn::Mat in = ncnn::Mat::from_pixels(a.data, ncnn::Mat::PIXEL_BGR, 416, 416);
+    cout << "input layer: " << endl;
+    float* value_input_layer = in.channel(0);
+    for (int i = 0; i < 3; i++) {
+        std::cout << "value: " << *value_input_layer << endl;
+        value_input_layer += 1;
+    }
 
     ncnn::Mat out;
     ncnn::Extractor ex = yolov3.create_extractor();
@@ -84,18 +112,32 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
 //    std::cout << "repeat 100 times, avg time per run is " << mytime/100 << "ms";
 
 
-    for (int i = 0; i < 133; i++) {
-        std::cout << "i: " << i << ", layer out: "<<ex.extract(i, out) << ", shape:" << out.c << "," << out.h << "," << out.w  << std::endl;
-        if (i == 195) {
-            printf("test\n");
-        }
+//    for (int i = 0; i < 133; i++) {
+//        std::cout << "i: " << i << ", layer out: "<<ex.extract(i, out) << ", shape:" << out.c << "," << out.h << "," << out.w  << std::endl;
+//        if (i == 195) {
+//            printf("test\n");
+//        }
+//    }
+
+    // 18x26x26
+    ncnn::Mat yolo_layer;
+    ex.extract(131, yolo_layer);
+    std::cout << "18x26x26 yolo layer:" << endl;
+    float* value_yolo_layer = yolo_layer.channel(0);
+    for (int i = 0; i < 3; i++) {
+        std::cout << "value: " << *value_yolo_layer << endl;
+        value_yolo_layer += 1;
     }
 
     std::cout << "output, layer out: "<<ex.extract("output", out) << ", shape:" << out.c << "," << out.h << "," << out.w  << std::endl;
 
+    cout << "----------------rect box 0~1-------------" <<endl;
+    for (int i = 0; i < 4; i++) {
+        const float* values = out.row(i);
+        std::cout << values[0] << ", " << values[1] << ", " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] << std::endl;
+    }
+    cout << "----------------rect box 0~1-------------" <<endl;
 
-    const float* values = out.row(0);
-    std::cout << values[0] << ", " << values[1] << ", " << values[2] << std::endl;
 
 
     printf("%d %d %d\n", out.w, out.h, out.c);
@@ -114,6 +156,12 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
 
         objects.push_back(object);
     }
+
+    cout << "----------------rect box pixel-------------" <<endl;
+    for (int i = 0; i < objects.size(); i++) {
+        std::cout << objects[i].label << ", " << objects[i].prob << ", " << objects[i].rect.x << ", " << objects[i].rect.y << ", " << objects[i].rect.width << ", " << objects[i].rect.height << std::endl;
+    }
+    cout << "----------------rect box pixel-------------" <<endl;
 
     return 0;
 }
@@ -180,18 +228,32 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    cv::Mat padded_resize_img = paddedResize(m);
+    const unsigned char* value_padded_resize = padded_resize_img.data;
+    cout << "paddedResize mat: " << endl;
+    for (int i = 0; i < 3; i++) {
+        cout << (int)(*value_padded_resize) << endl;
+        value_padded_resize++;
+    }
+
+
+    cv::cvtColor(padded_resize_img, padded_resize_img, cv::COLOR_BGR2RGB);
+//    cv::imshow("padded_resize_img", padded_resize_img);
+//    cv::imwrite("padded_resize_bus.jpg", padded_resize_img);
+//    cv::waitKey(0);
+
 #if NCNN_VULKAN
     ncnn::create_gpu_instance();
 #endif // NCNN_VULKAN
 
     std::vector<Object> objects;
-    detect_yolov3(m, objects);
+    detect_yolov3(padded_resize_img, objects);
 
 #if NCNN_VULKAN
     ncnn::destroy_gpu_instance();
 #endif // NCNN_VULKAN
 
-//    draw_objects(m, objects);
+    draw_objects(padded_resize_img, objects);
 
     return 0;
 }
