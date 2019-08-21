@@ -1,3 +1,5 @@
+set(CMAKE_BUILD_TYPE "Release")
+
 if(CMAKE_TOOLCHAIN_FILE)
     set(LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to")
     # get absolute path, but get_filename_component ABSOLUTE only refer with source dir, so find_file here :(
@@ -18,7 +20,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(ncnn)
-
 option(NCNN_OPENMP "openmp support" ON)
 option(NCNN_STDIO "load model from external file" ON)
 option(NCNN_STRING "plain and verbose string" ON)

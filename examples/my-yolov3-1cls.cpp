@@ -28,7 +28,10 @@
 
 using namespace std;
 
-int net_in_size = 416;
+int net_in_size = 352;
+
+string model_param = "yolov3.param";
+string model_bin = "yolov3.bin";
 
 struct Object
 {
@@ -63,8 +66,8 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
     yolov3.opt.use_vulkan_compute = true;
 #endif // NCNN_VULKAN
 
-    yolov3.load_param("yolov3.param");
-    yolov3.load_model("yolov3.bin");
+    yolov3.load_param(model_param.c_str());
+    yolov3.load_model(model_bin.c_str());
 
 
     int img_w = bgr.cols;
@@ -92,35 +95,36 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
     }
 
     ncnn::Mat out;
-    ncnn::Extractor ex = yolov3.create_extractor();
-    ex.set_num_threads(4);
-    ex.input(0, in);
-//    ex.extract(138,  out);
+
+    int repeat_count = 1;
+    const char* repeat = std::getenv("REPEAT_COUNT");
+
+    if (repeat) {
+        repeat_count = std::strtoul(repeat, NULL, 10);
+    }
 
     struct timeval t0, t1;
-    float avg_time = 0.f;
     gettimeofday(&t0, NULL);
+    for (int i = 0; i < repeat_count; i++) {
+        ncnn::Extractor ex = yolov3.create_extractor();
+        ex.set_num_threads(4);
+        ex.input(0, in);
+        ex.extract("output", out);
+    }
+    gettimeofday(&t1, NULL);
+    float mytime = ( float )((t1.tv_sec * 1000000 + t1.tv_usec) - (t0.tv_sec * 1000000 + t0.tv_usec)) / 1000;
+    std::cout << "repeat " << repeat_count << "times, avg time per run is " << mytime/repeat_count << "ms" << endl;
 
-//    for (int i = 0; i < 100; i++) {
-//        ncnn::Extractor ex = yolov3.create_extractor();
-//        ex.set_num_threads(4);
-//        ex.input(0, in);
-//        ex.extract(138,  out);
-//    }
-//    gettimeofday(&t1, NULL);
-//    float mytime = ( float )((t1.tv_sec * 1000000 + t1.tv_usec) - (t0.tv_sec * 1000000 + t0.tv_usec)) / 1000;
-//    std::cout << "repeat 100 times, avg time per run is " << mytime/100 << "ms";
-
-
-//    for (int i = 0; i < 133; i++) {
-//        std::cout << "i: " << i << ", layer out: "<<ex.extract(i, out) << ", shape:" << out.c << "," << out.h << "," << out.w  << std::endl;
-//        if (i == 195) {
-//            printf("test\n");
-//        }
-//    }
 
     // 18x26x26
     ncnn::Mat yolo_layer;
+    ncnn::Extractor ex = yolov3.create_extractor();
+    ex.set_num_threads(4);
+    ex.input(0, in);
+//    for (int i = 0; i < 133; i++) {
+//        std::cout << "i: " << i << ", layer out: "<<ex.extract(i, out) << ", shape:" << out.c << "," << out.h << "," << out.w  << std::endl;
+//    }
+
     ex.extract(131, yolo_layer);
     std::cout << "18x26x26 yolo layer:" << endl;
     float* value_yolo_layer = yolo_layer.channel(0);
@@ -169,7 +173,7 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
 static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
 {
     static const char* class_names[] = {"background",
-        "aeroplane", "bicycle", "bird", "boat",
+        "person", "bicycle", "bird", "boat",
         "bottle", "bus", "car", "cat", "chair",
         "cow", "diningtable", "dog", "horse",
         "motorbike", "person", "pottedplant",
@@ -213,13 +217,16 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
 
 int main(int argc, char** argv)
 {
-    if (argc != 2)
-    {
-        fprintf(stderr, "Usage: %s [imagepath]\n", argv[0]);
-        return -1;
-    }
+//    if (argc != 2)
+//    {
+//        fprintf(stderr, "Usage: %s [imagepath]\n", argv[0]);
+//        return -1;
+//    }
 
     const char* imagepath = argv[1];
+
+    model_param = string(argv[2]);
+    model_bin = string(argv[3]);
 
     cv::Mat m = cv::imread(imagepath, 1);
     if (m.empty())

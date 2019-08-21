@@ -17,12 +17,15 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <iostream>
 
 #include "platform.h"
 #include "net.h"
 #if NCNN_VULKAN
 #include "gpu.h"
 #endif // NCNN_VULKAN
+
+using namespace std;
 
 struct Object
 {
@@ -56,13 +59,29 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
     const float norm_vals[3] = {0.007843f, 0.007843f, 0.007843f};
     in.substract_mean_normalize(mean_vals, norm_vals);
 
+    ncnn::Mat out;
     ncnn::Extractor ex = yolov3.create_extractor();
     ex.set_num_threads(4);
-
     ex.input("data", in);
 
-    ncnn::Mat out;
-    ex.extract("detection_out", out);
+    for (int i = 0; i < 140; i++) {
+        cout << "i: " << i << ", layer out: "<<ex.extract(i, out) << ", shape:" << out.c << "," << out.h << "," << out.w  << std::endl;
+    }
+
+    int repeat_count = 1;
+    const char* repeat = std::getenv("REPEAT_COUNT");
+
+    if (repeat) {
+        repeat_count = std::strtoul(repeat, NULL, 10);
+    }
+
+    for (int i = 0; i < repeat_count; i++) {
+        ncnn::Extractor ex = yolov3.create_extractor();
+        ex.set_num_threads(4);
+        ex.input("data", in);
+        ex.extract("detection_out", out);
+    }
+
 
 //     printf("%d %d %d\n", out.w, out.h, out.c);
     objects.clear();
@@ -87,7 +106,7 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
 static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
 {
     static const char* class_names[] = {"background",
-        "aeroplane", "bicycle", "bird", "boat",
+        "airplane", "bicycle", "bird", "boat",
         "bottle", "bus", "car", "cat", "chair",
         "cow", "diningtable", "dog", "horse",
         "motorbike", "person", "pottedplant",
