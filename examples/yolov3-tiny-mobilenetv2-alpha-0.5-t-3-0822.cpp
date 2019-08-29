@@ -28,7 +28,7 @@
 
 using namespace std;
 
-int net_in_size = 416;
+int net_in_size = 352;
 
 string model_param = "yolov3.param";
 string model_bin = "yolov3.bin";
@@ -199,7 +199,6 @@ int main(int argc, char** argv)
         gettimeofday(&t1, NULL);
         float draw_time = ( float )((t1.tv_sec * 1000000 + t1.tv_usec) - (t0.tv_sec * 1000000 + t0.tv_usec)) / 1000;
         std::cout << "draw time per run is " << draw_time << "ms" << endl;
-
     }
 
     cv::Mat m = cv::imread(imagepath, 1);
