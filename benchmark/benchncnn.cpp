@@ -333,15 +333,15 @@ int main(int argc, char** argv)
 
     benchmark("mobilenetv2_yolov3", ncnn::Mat(352, 352, 3));
 
-    benchmark("my-mobilenetv2-yolov3-1cls", ncnn::Mat(352, 352, 3));
+    benchmark("my-mobilenetv2-yolov3-1cls", ncnn::Mat(416, 416, 3));
 
-    benchmark("my-mobilenetv2-yolov3-1cls-alpha-0.5", ncnn::Mat(352, 352, 3));
+    benchmark("my-mobilenetv2-yolov3-1cls-alpha-0.5", ncnn::Mat(416, 416, 3));
 
-    benchmark("my-mobilenetv2-yolov3-1cls-t-3", ncnn::Mat(352, 352, 3));
+    benchmark("my-mobilenetv2-yolov3-1cls-t-3", ncnn::Mat(416, 416, 3));
 
-    benchmark("mobilenetv2-yolov3-1cls-last-conv-depthwise", ncnn::Mat(352, 352, 3));
+    benchmark("mobilenetv2-yolov3-1cls-last-conv-depthwise", ncnn::Mat(416, 416, 3));
 
-    benchmark("my-mobilenetv2-yolov3-1cls-alpha-0.5-t-3", ncnn::Mat(352, 352, 3));
+    benchmark("my-mobilenetv2-yolov3-1cls-alpha-0.5-t-3", ncnn::Mat(416, 416, 3));
 
 #if NCNN_VULKAN
     delete g_blob_vkallocator;

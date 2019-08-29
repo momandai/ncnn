@@ -1,6 +1,6 @@
 #set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_BUILD_TYPE "Release")
-find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
+find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs  videoio calib3d features2d)
 if(NOT OpenCV_FOUND)
     find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
 endif()
@@ -45,3 +45,6 @@ target_link_libraries(peleenetssd_seg ${NCNN_EXAMPLE_LINK_LIBRARIES})
 
 add_executable(my-mobilenetv2-yolov3-1cls my-yolov3-1cls.cpp)
 target_link_libraries(my-mobilenetv2-yolov3-1cls ${NCNN_EXAMPLE_LINK_LIBRARIES})
+
+add_executable(yolov3-tiny-1cls-mobilenetv2-alpha-0.5-t-3-0822 yolov3-tiny-1cls-mobilenetv2-alpha-0.5-t-3-0822.cpp)
+target_link_libraries(yolov3-tiny-1cls-mobilenetv2-alpha-0.5-t-3-0822 ${NCNN_EXAMPLE_LINK_LIBRARIES})
